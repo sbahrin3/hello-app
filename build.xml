@@ -1,51 +1,83 @@
 
-<project name="hello-app" xmlns:ivy="antlib:org.apache.ivy.ant">
-    <!-- some variables used -->
-    <property name="lib.dir" value="WebContent\WEB-INF\lib"/>
-    <property name="build.dir" value="build"/>
-    <property name="src.dir" value="src"/>
+<project name="hello-app" xmlns:ivy="antlib:org.apache.ivy.ant"  default="main" basedir=".">
+	
+	<!-- Project Structure -->
+	<property name="jdk.version" value="1.8" />
+	<property name="projectName" value="Hello-App" />
+	<property name="app.name" value="hello-app" />
+	<property name="src.dir" location="src" />
+	<property name="resources.dir" location="resources" />
+	<property name="web.dir" value="WebContent" />
+	<property name="web.classes.dir" location="${web.dir}/WEB-INF/classes" />
+	<property name="target.dir" location="${web.classes.dir}" />
+	<property name="target.temp.dir" location="temp" />
+	<property name="lib.dir" value="${web.dir}/WEB-INF/lib" />	
 
-    <!-- paths used for compilation and run  -->
-    <path id="lib.path.id">
-        <fileset dir="${lib.dir}"/>
-    </path>
-    <path id="run.path.id">
-        <path refid="lib.path.id"/>
-        <path location="${build.dir}"/>
-    </path>
+	<!-- ivy start -->
+	<target name="resolve" description="retrieve dependencies with ivy">
+		<echo message="Getting dependencies..." />
+		<ivy:retrieve />
 
-    <!-- =================================
-          target: resolve
-         ================================= -->
-    <target name="resolve" description="--> retreive dependencies with ivy">
-        <ivy:retrieve/>
-    </target>
+		<ivy:cachepath pathid="compile.path" conf="compile" />
+		<ivy:cachepath pathid="runtime.path" conf="runtime" />
+		<ivy:cachepath pathid="test.path" conf="test" />
 
-    <!-- =================================
-          target: report
-         ================================= -->
-    <target name="report" depends="resolve" description="--> generates a report of dependencies">
-        <ivy:report todir="${build.dir}"/>
-    </target>
+	</target>
+	
+	<!-- Compile Java source from ${src.dir} and output it to ${web.classes.dir} -->
+	<target name="compile" depends="init, resolve" description="compile source code">
+		<mkdir dir="${web.classes.dir}" />
+		<javac destdir="${web.classes.dir}" source="${jdk.version}" target="${jdk.version}" debug="true" includeantruntime="false" classpathref="compile.path">
+			<src path="${src.dir}" />
+		</javac>
+	</target>
+	
+	<!-- Copy resources from ${resources.dir} to ${web.classes.dir} -->
+	<target name="copy-resources" description="copy Java resources like xml and properties files">
+		<copy todir="${web.classes.dir}">
+			<fileset dir="${resources.dir}">
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+	</target>
+	
+	<!-- Create the the WAR -->
+	<target name="package" depends="clean, compile, copy-resources" description="create a war file">
+		<!-- ivy get dependencies and put it in ${lib.dir} -->
+		<!-- ivy:retrieve pattern="${lib.dir}/[artifact]-[revision].[ext]" conf="runtime" / -->
+		<ivy:retrieve pattern="${lib.dir}/[conf]/[artifact]-[type]-[revision].[ext]" conf="runtime" />
 
+		<war destfile="build/${app.name}.war" webxml="${web.dir}/WEB-INF/web.xml">
+			<webinf dir="${web.dir}/WEB-INF" />
+			<lib dir="${lib.dir}" />
+			<!-- zipfileset dir="${resources.dir}" prefix="resources" / -->
+		</war>
+	</target>
+	
+	<!-- Create folders -->
+	<target name="init">
+		<mkdir dir="${src.dir}" />
+		<mkdir dir="${target.dir}" />
+		<mkdir dir="${web.classes.dir}" />
+	</target>
 
-    <!-- =================================
-          target: clean
-         ================================= -->
-    <target name="clean" description="--> clean the project">
-        <delete includeemptydirs="true">
-            <fileset dir="${basedir}">
-                <exclude name="src/**"/>
-                <exclude name="build.xml"/>
-              <exclude name="ivy.xml"/>
-                </fileset>
-        </delete>
-    </target>
+	<!-- Delete folders -->
+	<target name="clean" description="clean up">
+		<delete dir="${web.classes.dir}" />
+		<delete dir="${target.dir}" />
+	</target>
 
-    <!-- =================================
-          target: clean-cache
-         ================================= -->
-    <target name="clean-cache" description="--> clean the ivy cache">
-        <ivy:cleancache/>
-    </target>
+	<target name="main" depends="package" />	
+	
+	
+	<!-- My personal task -->
+    <target name="copy_to_GitHub">
+    	<copy todir="/Users/shamsulbahrin/Documents/GitHub/hello-app" includeEmptyDirs="no">
+    	     <fileset dir=".">
+            	<exclude name="**/*.jar"/>
+    	     </fileset>
+    	</copy>    	
+    </target>		
+
 </project>
